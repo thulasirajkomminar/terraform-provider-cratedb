@@ -9,7 +9,7 @@ labels: feature-request
 Hi there,
 
 Thank you for opening an issue! Please note that we try to keep the this issue tracker reserved for
-bug reports and feature requests related to the InfluxDB V3 provider.
+bug reports and feature requests related to the CrateDB provider.
 -->
 
 
