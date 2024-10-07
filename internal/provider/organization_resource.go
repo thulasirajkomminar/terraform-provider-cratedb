@@ -122,10 +122,9 @@ func (r *OrganizationResource) Create(ctx context.Context, req resource.CreateRe
 		)
 		return
 	}
-	createOrganization := createOrganizationResponse.JSON201
 
 	// Map response body to schema and populate Computed attribute values
-	organizationPlan, err := getOrganizationModel(ctx, *createOrganization)
+	organizationPlan, err := getOrganizationModel(ctx, *createOrganizationResponse.JSON201)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error getting organization model",
