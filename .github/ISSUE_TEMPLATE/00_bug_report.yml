@@ -8,12 +8,12 @@ body:
       value: |
         Hi there,
         Thank you for opening an issue! Please note that we try to keep the this issue tracker reserved for
-        bug reports and feature requests related to the InfluxDB provider.
+        bug reports and feature requests related to the CrateDB provider.
 
   - type: markdown
     attributes:
       value: |
-        # Terraform and InfluxDB V3 Provider Versions
+        # Terraform and CrateDB Provider Versions
 
         Please run `terraform -v` to show the Terraform Core and provider version(s). If you are not running the latest version of either the provider or Terraform Core, please consider upgrading, as your issue may have already been fixed.
 
@@ -29,10 +29,10 @@ body:
       required: true
 
   - type: input
-    id: influxdb_version
+    id: cratedb_version
     attributes:
-      label: InfluxDB V3 Provider Version
-      description: The semantic version of the InfluxDB V3 Provider used when experiencing the bug. If multiple versions have been tested, a comma separated list.
+      label: CrateDB Provider Version
+      description: The semantic version of the CrateDB Provider used when experiencing the bug. If multiple versions have been tested, a comma separated list.
       placeholder: "X.Y.Z"
     validations:
       required: true
@@ -51,7 +51,7 @@ body:
     attributes:
       label: Affected Resource(s)
       description: Please list the affected resource(s) and/or data source(s).
-      placeholder: "* influxdb3_xxx"
+      placeholder: "* cratedb_xxx"
     validations:
       required: false
 
