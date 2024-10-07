@@ -115,8 +115,8 @@ github.com/jhump/protoreflect v1.15.1/go.mod h1:jD/2GMKKE6OqX8qTjhADU1e6DShO+gav
 github.com/juju/gnuflag v0.0.0-20171113085948-2ce1bb71843d/go.mod h1:2PavIy+JPciBPrBUjwbNvtwB6RQlve+hkpll6QSNmOE=
 github.com/kevinburke/ssh_config v1.2.0 h1:x584FjTGwHzMwvHx18PXxbBVzfnxogHaAReU4gf13a4=
 github.com/kevinburke/ssh_config v1.2.0/go.mod h1:CT57kijsi8u/K/BOFA39wgDQJ9CxiF4nAY/ojJ6r6mM=
-github.com/komminarlabs/cratedb v0.1.0 h1:F0hf7zAaCU2MvF21AJiJIe0DI+98l5QD8xFkCIUpyKA=
-github.com/komminarlabs/cratedb v0.1.0/go.mod h1:U6rR2Y2uwDcasah14nfr/yA0iEmHzIJ5pHBq2Sczn2c=
+github.com/komminarlabs/cratedb v0.2.0 h1:6OrP2t7R9+EY4jo0lH4/5c3rQ3/zNL9drRndqcmZZYQ=
+github.com/komminarlabs/cratedb v0.2.0/go.mod h1:U6rR2Y2uwDcasah14nfr/yA0iEmHzIJ5pHBq2Sczn2c=
 github.com/kr/pretty v0.3.0 h1:WgNl7dwNpEZ6jJ9k1snq4pZsg7DOEN8hP9Xw0Tsjwk0=
 github.com/kr/pretty v0.3.0/go.mod h1:640gp4NfQd8pI5XOwp5fnNeVWj67G7CFk/SaSQn7NBk=
 github.com/kr/text v0.2.0 h1:5Nx0Ya0ZqY2ygV366QzturHI13Jq95ApcVaJBhpS+AY=

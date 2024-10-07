@@ -206,6 +206,7 @@ func (p *CrateDBProvider) Configure(ctx context.Context, req provider.ConfigureR
 // Resources defines the resources implemented in the provider.
 func (p *CrateDBProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
+		NewClusterResource,
 		NewOrganizationResource,
 	}
 }
@@ -213,6 +214,7 @@ func (p *CrateDBProvider) Resources(ctx context.Context) []func() resource.Resou
 // DataSources defines the data sources implemented in the provider.
 func (p *CrateDBProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
+		NewClusterDataSource,
 		NewOrganizationDataSource,
 		NewOrganizationsDataSource,
 	}
