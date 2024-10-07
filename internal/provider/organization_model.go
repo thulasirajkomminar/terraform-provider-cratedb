@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/komminarlabs/cratedb"
 )
@@ -21,21 +20,8 @@ type OrganizationModel struct {
 	RoleFQN              types.String `tfsdk:"role_fqn"`
 }
 
-// DatabasePartitionTemplateModel maps CrateDB organization DC schema data.
-type OrganizationDCModel struct {
-	Created  types.String `tfsdk:"created"`
-	Modified types.String `tfsdk:"modified"`
-}
-
-func (o OrganizationDCModel) GetAttrType() map[string]attr.Type {
-	return map[string]attr.Type{
-		"created":  types.StringType,
-		"modified": types.StringType,
-	}
-}
-
 func getOrganizationModel(ctx context.Context, organization cratedb.Organization) (*OrganizationModel, error) {
-	dcValue := OrganizationDCModel{
+	dcValue := DCModel{
 		Created:  types.StringValue(organization.Dc.Created.String()),
 		Modified: types.StringValue(organization.Dc.Modified.String()),
 	}
