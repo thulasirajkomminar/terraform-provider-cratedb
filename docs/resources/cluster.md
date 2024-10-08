@@ -29,7 +29,7 @@ Creates and manages a cluster.
 
 ### Optional
 
-- `channel` (String) The channel of the cluster. Default is 'stable'.
+- `channel` (String) The channel of the cluster. Default is `stable`.
 - `hardware_specs` (Attributes) The hardware specs of the cluster. (see [below for nested schema](#nestedatt--hardware_specs))
 - `product_unit` (Number) The product unit of the cluster. Default is `0`.
 

@@ -129,7 +129,7 @@ func getClusterModel(ctx context.Context, cluster cratedb.Cluster) (*ClusterMode
 		}
 	}
 
-	clusterModel := ClusterModel{
+	return &ClusterModel{
 		Dc:                 dcObjectValue,
 		HardwareSpecs:      hardwareSpecsObjectValue,
 		Health:             healthObjectValue,
@@ -155,6 +155,5 @@ func getClusterModel(ctx context.Context, cluster cratedb.Cluster) (*ClusterMode
 		Suspended:          types.BoolPointerValue(cluster.Suspended),
 		Url:                types.StringPointerValue(cluster.Url),
 		Username:           types.StringValue(cluster.Username),
-	}
-	return &clusterModel, nil
+	}, nil
 }
