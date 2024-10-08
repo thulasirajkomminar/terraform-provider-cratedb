@@ -150,7 +150,7 @@ func (r *ProjectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	// Get refreshed project value from InfluxDB
+	// Get refreshed project value from API
 	readProjectResponse, err := r.client.GetApiV2ProjectsProjectIdWithResponse(ctx, state.Id.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
