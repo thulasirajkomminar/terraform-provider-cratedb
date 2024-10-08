@@ -61,11 +61,13 @@ provider "cratedb" {
 * `cratedb_cluster`
 * `cratedb_organization`
 * `cratedb_organizations`
+* `cratedb_project`
 
 ### Resources
 
 * `cratedb_cluster`
 * `cratedb_organization`
+* `cratedb_project`
 
 ## Developing the Provider
 

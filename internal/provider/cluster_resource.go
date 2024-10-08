@@ -83,7 +83,7 @@ func (r *ClusterResource) Schema(ctx context.Context, req resource.SchemaRequest
 				Computed:    true,
 				Optional:    true,
 				Default:     stringdefault.StaticString("stable"),
-				Description: "The channel of the cluster. Default is 'stable'.",
+				Description: "The channel of the cluster. Default is `stable`.",
 			},
 			"crate_version": schema.StringAttribute{
 				Required:    true,

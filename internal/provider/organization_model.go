@@ -31,7 +31,7 @@ func getOrganizationModel(ctx context.Context, organization cratedb.Organization
 		return nil, fmt.Errorf("error getting organization DC value")
 	}
 
-	organizationModel := OrganizationModel{
+	return &OrganizationModel{
 		Dc:                   dcObjectValue,
 		Email:                types.StringValue(string(*organization.Email)),
 		Id:                   types.StringValue(*organization.Id),
@@ -40,6 +40,5 @@ func getOrganizationModel(ctx context.Context, organization cratedb.Organization
 		PlanType:             types.Int32Value(int32(*organization.PlanType)),
 		ProjectCount:         types.Int32Value(int32(*organization.ProjectCount)),
 		RoleFQN:              types.StringValue(string(*organization.RoleFqn)),
-	}
-	return &organizationModel, nil
+	}, nil
 }

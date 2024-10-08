@@ -208,6 +208,7 @@ func (p *CrateDBProvider) Resources(ctx context.Context) []func() resource.Resou
 	return []func() resource.Resource{
 		NewClusterResource,
 		NewOrganizationResource,
+		NewProjectResource,
 	}
 }
 
@@ -217,6 +218,7 @@ func (p *CrateDBProvider) DataSources(ctx context.Context) []func() datasource.D
 		NewClusterDataSource,
 		NewOrganizationDataSource,
 		NewOrganizationsDataSource,
+		NewProjectDataSource,
 	}
 }
 
