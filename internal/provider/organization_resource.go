@@ -152,7 +152,7 @@ func (r *OrganizationResource) Read(ctx context.Context, req resource.ReadReques
 		return
 	}
 
-	// Get refreshed organization value from InfluxDB
+	// Get refreshed organization value from API
 	readOrganizationResponse, err := r.client.GetApiV2OrganizationsOrganizationIdWithResponse(ctx, state.Id.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(

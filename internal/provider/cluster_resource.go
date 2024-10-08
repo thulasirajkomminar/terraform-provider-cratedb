@@ -406,7 +406,7 @@ func (r *ClusterResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	// Get refreshed cluster value from InfluxDB
+	// Get refreshed cluster value from API
 	password := state.Password
 	organizationId := state.OrganizationId
 	readClusterResponse, err := r.client.GetApiV2ClustersClusterIdWithResponse(ctx, state.Id.ValueString())
