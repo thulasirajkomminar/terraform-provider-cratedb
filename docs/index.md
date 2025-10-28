@@ -17,7 +17,7 @@ Use the CrateDB provider to deploy and manage resources supported by CrateDB. Yo
 terraform {
   required_providers {
     cratedb = {
-      source = "komminarlabs/cratedb"
+      source = "thulasirajkomminar/cratedb"
     }
   }
 }

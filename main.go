@@ -7,7 +7,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 
-	"github.com/komminarlabs/terraform-provider-cratedb/internal/provider"
+	"github.com/thulasirajkomminar/terraform-provider-cratedb/internal/provider"
 )
 
 var (
@@ -26,7 +26,7 @@ func main() {
 	flag.Parse()
 
 	opts := providerserver.ServeOpts{
-		Address: "registry.terraform.io/komminarlabs/cratedb",
+		Address: "registry.terraform.io/thulasirajkomminar/cratedb",
 		Debug:   debug,
 	}
 

@@ -14,7 +14,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
-	"github.com/komminarlabs/cratedb"
+	"github.com/thulasirajkomminar/cratedb"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
