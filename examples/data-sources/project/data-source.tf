@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     cratedb = {
-      source = "komminarlabs/cratedb"
+      source = "thulasirajkomminar/cratedb"
     }
   }
 }

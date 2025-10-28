@@ -6,7 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/komminarlabs/cratedb"
+	"github.com/thulasirajkomminar/cratedb"
 )
 
 // ClusterModel maps CrateDB cluster schema data.

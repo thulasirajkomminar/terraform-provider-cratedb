@@ -38,7 +38,7 @@ Add the below code to your configuration.
 terraform {
   required_providers {
     cratedb = {
-      source = "komminarlabs/cratedb"
+      source = "thulasirajkomminar/cratedb"
     }
   }
 }

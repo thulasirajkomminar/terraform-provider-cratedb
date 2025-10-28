@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/komminarlabs/cratedb"
+	"github.com/thulasirajkomminar/cratedb"
 )
 
 // ProjectModel maps CrateDB project schema data.
