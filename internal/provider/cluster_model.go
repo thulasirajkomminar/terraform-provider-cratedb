@@ -124,7 +124,7 @@ func getClusterModel(ctx context.Context, cluster cratedb.Cluster) (*ClusterMode
 		for _, ipWhitelist := range *cluster.IpWhitelist {
 			ipWhitelistValues = append(ipWhitelistValues, ClusterIpWhitelistModel{
 				Cidr:        types.StringValue(ipWhitelist.Cidr),
-				Description: types.StringValue(string(*ipWhitelist.Description)),
+				Description: types.StringValue(*ipWhitelist.Description),
 			})
 		}
 	}
