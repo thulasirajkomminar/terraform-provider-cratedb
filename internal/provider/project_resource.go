@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
-	"github.com/thulasirajkomminar/cratedb"
+	"github.com/thulasirajkomminar/cratedb-cloud-go"
 )
 
 // Ensure provider defined types fully satisfy framework interfaces.
