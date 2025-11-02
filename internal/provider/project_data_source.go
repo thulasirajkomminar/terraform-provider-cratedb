@@ -6,7 +6,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
-	"github.com/thulasirajkomminar/cratedb"
+	"github.com/thulasirajkomminar/cratedb-cloud-go"
 )
 
 // Ensure the implementation satisfies the expected interfaces.
