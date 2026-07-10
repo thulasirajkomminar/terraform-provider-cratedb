@@ -4,9 +4,8 @@ import (
 	"context"
 	"net/http"
 	"os"
-	"time"
+	"strings"
 
-	"github.com/hashicorp/go-retryablehttp"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -16,6 +15,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 	"github.com/thulasirajkomminar/cratedb-cloud-go"
 )
+
+// defaultURL is the CrateDB Cloud API endpoint used when neither the `url`
+// provider attribute nor the CRATEDB_URL environment variable is set.
+const defaultURL = "https://console.cratedb.cloud"
 
 // Ensure the implementation satisfies the expected interfaces.
 var _ provider.Provider = &CrateDBProvider{}
@@ -48,17 +51,17 @@ func (p *CrateDBProvider) Schema(ctx context.Context, req provider.SchemaRequest
 
 		Attributes: map[string]schema.Attribute{
 			"api_key": schema.StringAttribute{
-				Description: "The API key",
+				Description: "The API key. Can also be set with the `CRATEDB_API_KEY` environment variable.",
 				Optional:    true,
 				Sensitive:   true,
 			},
 			"api_secret": schema.StringAttribute{
-				Description: "The API secret",
+				Description: "The API secret. Can also be set with the `CRATEDB_API_SECRET` environment variable.",
 				Optional:    true,
 				Sensitive:   true,
 			},
 			"url": schema.StringAttribute{
-				Description: "The CrateDB Cloud URL",
+				Description: "The CrateDB Cloud URL. Can also be set with the `CRATEDB_URL` environment variable. Defaults to `" + defaultURL + "`.",
 				Optional:    true,
 			},
 		},
@@ -128,35 +131,30 @@ func (p *CrateDBProvider) Configure(ctx context.Context, req provider.ConfigureR
 		url = config.URL.ValueString()
 	}
 
+	if url == "" {
+		url = defaultURL
+	}
+	url = strings.TrimRight(url, "/")
+
 	// If any of the expected configurations are missing, return
 	// errors with provider-specific guidance.
 
 	if apiKey == "" {
 		resp.Diagnostics.AddAttributeError(
-			path.Root("apiKey"),
+			path.Root("api_key"),
 			"Missing CrateDB API Key",
 			"The provider cannot create the CrateDB client as there is a missing or empty value for the CrateDB API Key. "+
-				"Set the API Key value in the configuration or use the CRATEDB_API_KEY environment variable. "+
+				"Set the api_key value in the configuration or use the CRATEDB_API_KEY environment variable. "+
 				"If either is already set, ensure the value is not empty.",
 		)
 	}
 
 	if apiSecret == "" {
 		resp.Diagnostics.AddAttributeError(
-			path.Root("apiSecret"),
+			path.Root("api_secret"),
 			"Missing CrateDB API Secret",
 			"The provider cannot create the CrateDB client as there is a missing or empty value for the CrateDB API Secret. "+
-				"Set the API Secret value in the configuration or use the CRATEDB_API_SECRET environment variable. "+
-				"If either is already set, ensure the value is not empty.",
-		)
-	}
-
-	if url == "" {
-		resp.Diagnostics.AddAttributeError(
-			path.Root("url"),
-			"Missing CrateDB Cloud URL",
-			"The provider cannot create the CrateDB client as there is a missing or empty value for the CrateDB Cloud URL. "+
-				"Set the url value in the configuration or use the CRATEDB_URL environment variable. "+
+				"Set the api_secret value in the configuration or use the CRATEDB_API_SECRET environment variable. "+
 				"If either is already set, ensure the value is not empty.",
 		)
 	}
@@ -165,27 +163,20 @@ func (p *CrateDBProvider) Configure(ctx context.Context, req provider.ConfigureR
 		return
 	}
 
-	ctx = tflog.SetField(ctx, "CRATEDB_API_KEY", apiKey)
-	ctx = tflog.SetField(ctx, "CRATEDB_API_SECRET", apiSecret)
-	ctx = tflog.SetField(ctx, "CRATEDB_URL", url)
-	ctx = tflog.MaskFieldValuesWithFieldKeys(ctx, "CRATEDB_API_SECRET")
-
+	ctx = tflog.SetField(ctx, "cratedb_url", url)
 	tflog.Debug(ctx, "Creating CrateDB client")
 
-	// Create a new CrateDB client using the configuration values
-
-	// Create a new retryable HTTP client with exponential backoff
-	retryClient := retryablehttp.NewClient()
-	retryClient.Backoff = retryablehttp.LinearJitterBackoff
-	retryClient.RetryWaitMin = 1 * time.Second
-	retryClient.RetryWaitMax = 5 * time.Second
-	retryClient.RetryMax = 3
-
-	client, err := cratedb.NewClientWithResponses(url, cratedb.WithRequestEditorFn(func(ctx context.Context, req *http.Request) error {
-		req.SetBasicAuth(apiKey, apiSecret)
-		req.Header.Set("Accept", "application/json")
-		return nil
-	}), cratedb.WithHTTPClient(retryClient.StandardClient()))
+	// Create a new CrateDB client using a retrying HTTP client whose
+	// transport chain logs every request/response with TF_LOG=DEBUG while
+	// keeping credentials out of the logs.
+	client, err := cratedb.NewClientWithResponses(
+		url,
+		cratedb.WithRequestEditorFn(func(ctx context.Context, req *http.Request) error {
+			req.Header.Set("Accept", "application/json")
+			return nil
+		}),
+		cratedb.WithHTTPClient(newAPIHTTPClient(apiKey, apiSecret)),
+	)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Create CrateDB Client",
@@ -219,6 +210,8 @@ func (p *CrateDBProvider) DataSources(ctx context.Context) []func() datasource.D
 		NewOrganizationDataSource,
 		NewOrganizationsDataSource,
 		NewProjectDataSource,
+		NewProjectsDataSource,
+		NewRegionsDataSource,
 	}
 }
 
