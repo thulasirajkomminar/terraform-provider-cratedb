@@ -2,8 +2,8 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-timetypes/timetypes"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/thulasirajkomminar/cratedb-cloud-go"
@@ -70,10 +70,12 @@ func (d *OrganizationDataSource) Schema(ctx context.Context, req datasource.Sche
 				Description: "The DublinCore of the organization.",
 				Attributes: map[string]schema.Attribute{
 					"created": schema.StringAttribute{
+						CustomType:  timetypes.RFC3339Type{},
 						Computed:    true,
 						Description: "The created time.",
 					},
 					"modified": schema.StringAttribute{
+						CustomType:  timetypes.RFC3339Type{},
 						Computed:    true,
 						Description: "The modified time.",
 					},
@@ -85,20 +87,9 @@ func (d *OrganizationDataSource) Schema(ctx context.Context, req datasource.Sche
 
 // Configure adds the provider configured client to the data source.
 func (d *OrganizationDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	// Prevent panic if the provider has not been configured.
-	if req.ProviderData == nil {
-		return
+	if client := clientFromProviderData(req.ProviderData, "Data Source", &resp.Diagnostics); client != nil {
+		d.client = client
 	}
-
-	client, ok := req.ProviderData.(*cratedb.ClientWithResponses)
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected cratedb.ClientWithResponses, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-		return
-	}
-	d.client = client
 }
 
 // Read refreshes the Terraform state with the latest data.
@@ -119,10 +110,10 @@ func (d *OrganizationDataSource) Read(ctx context.Context, req datasource.ReadRe
 		return
 	}
 
-	if readOrganizationResponse.StatusCode() != 200 {
+	if readOrganizationResponse.StatusCode() != 200 || readOrganizationResponse.JSON200 == nil {
 		resp.Diagnostics.AddError(
 			"Error getting organization",
-			fmt.Sprintf("HTTP Status Code: %d\nStatus: %v", readOrganizationResponse.StatusCode(), readOrganizationResponse.Status()),
+			apiErrorDetail(readOrganizationResponse.HTTPResponse, readOrganizationResponse.Body),
 		)
 		return
 	}

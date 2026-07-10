@@ -18,14 +18,9 @@ type ProjectModel struct {
 }
 
 func getProjectModel(ctx context.Context, project cratedb.Project) (*ProjectModel, error) {
-	dcValue := DCModel{
-		Created:  types.StringValue(project.Dc.Created.String()),
-		Modified: types.StringValue(project.Dc.Modified.String()),
-	}
-
-	dcObjectValue, diags := types.ObjectValueFrom(ctx, dcValue.GetAttrType(), dcValue)
-	if diags.HasError() {
-		return nil, fmt.Errorf("error getting organization DC value")
+	dcObjectValue, err := getDCObjectValue(ctx, project.Dc)
+	if err != nil {
+		return nil, fmt.Errorf("error getting project DC value: %w", err)
 	}
 
 	return &ProjectModel{
