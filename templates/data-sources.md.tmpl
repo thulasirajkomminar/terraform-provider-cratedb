@@ -1,0 +1,19 @@
+---
+page_title: "{{.Name}} {{.Type}} - {{.ProviderName}}"
+subcategory: ""
+description: |-
+{{ .Description | plainmarkdown | trimspace | prefixlines "  " }}
+---
+
+{{/* Example files live in directories named without the provider prefix, e.g. examples/data-sources/cluster for cratedb_cluster. */}}
+{{- $shortName := index (split .Name (printf "%s_" .ProviderShortName)) 1 }}
+
+# {{.Name}} ({{.Type}})
+
+{{ .Description | trimspace }}
+
+## Example Usage
+
+{{ tffile (printf "examples/data-sources/%s/data-source.tf" $shortName) }}
+
+{{ .SchemaMarkdown | trimspace }}
