@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Hi there,
-        Thank you for opening an issue! Please note that we try to keep the this issue tracker reserved for
+        Thank you for opening an issue! Please note that we try to keep this issue tracker reserved for
         bug reports and feature requests related to the CrateDB provider.
 
   - type: markdown
@@ -17,7 +17,7 @@ body:
 
         Please run `terraform -v` to show the Terraform Core and provider version(s). If you are not running the latest version of either the provider or Terraform Core, please consider upgrading, as your issue may have already been fixed.
 
-        [Terraform documentation on provider versioning](https://www.terraform.io/docs/configuration/providers.html#provider-versions)
+        [Terraform documentation on provider versioning](https://developer.hashicorp.com/terraform/language/providers/requirements#version-constraints)
 
   - type: input
     id: tf_version
@@ -90,7 +90,7 @@ body:
 
         Terraform configurations or debug logs under 25MB may be [attached directly in the field](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/attaching-files). Files larger than this should be uploaded to a file hosting service and a link shared.
 
-        For your security you can also encrypt the files using our [GPG public key](https://keybase.io/hashicorp).
+        Please remove any sensitive information such as passwords or API credentials before sharing configurations and logs.
 
         **Note:** These form fields do not automatically render, so you will need to use [code fence(s)](https://help.github.com/articles/basic-writing-and-formatting-syntax/#quoting-code) to achieve proper formatting.
 
@@ -118,9 +118,9 @@ body:
     attributes:
       label: Debug Output
       description: |
-        If possible, please paste, upload, or link to a file or Gist containing debug logs. See note above for additional information on file size restrictions and encrypting.
+        If possible, please paste, upload, or link to a file or Gist containing debug logs. See note above for additional information on file size restrictions.
 
-        To obtain the debug output, see the [Terraform documentation on debugging](https://www.terraform.io/docs/internals/debugging.html).
+        To obtain the debug output, run Terraform with `TF_LOG=DEBUG` (see the [Terraform documentation on debugging](https://developer.hashicorp.com/terraform/internals/debugging)). The provider logs every HTTP request/response to the CrateDB Cloud API at this level, with credentials automatically masked.
     validations:
       required: false
 
