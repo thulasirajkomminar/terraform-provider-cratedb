@@ -2,9 +2,9 @@ package provider
 
 import (
 	"context"
-	"fmt"
 	"regexp"
 
+	"github.com/hashicorp/terraform-plugin-framework-timetypes/timetypes"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -25,7 +25,7 @@ import (
 // Ensure provider defined types fully satisfy framework interfaces.
 var (
 	_ resource.Resource                = &ClusterResource{}
-	_ resource.ResourceWithImportState = &ClusterResource{}
+	_ resource.ResourceWithConfigure   = &ClusterResource{}
 	_ resource.ResourceWithImportState = &ClusterResource{}
 )
 
@@ -97,6 +97,7 @@ func (r *ClusterResource) Schema(ctx context.Context, req resource.SchemaRequest
 				},
 				Attributes: map[string]schema.Attribute{
 					"created": schema.StringAttribute{
+						CustomType:  timetypes.RFC3339Type{},
 						Computed:    true,
 						Description: "The created time.",
 						PlanModifiers: []planmodifier.String{
@@ -104,6 +105,7 @@ func (r *ClusterResource) Schema(ctx context.Context, req resource.SchemaRequest
 						},
 					},
 					"modified": schema.StringAttribute{
+						CustomType:  timetypes.RFC3339Type{},
 						Computed:    true,
 						Description: "The modified time.",
 						PlanModifiers: []planmodifier.String{
@@ -367,10 +369,10 @@ func (r *ClusterResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	if createClusterResponse.StatusCode() != 201 {
+	if createClusterResponse.StatusCode() != 201 || createClusterResponse.JSON201 == nil {
 		resp.Diagnostics.AddError(
 			"Error creating cluster",
-			fmt.Sprintf("HTTP Status Code: %d\nStatus: %v", createClusterResponse.StatusCode(), createClusterResponse.Status()),
+			apiErrorDetail(createClusterResponse.HTTPResponse, createClusterResponse.Body),
 		)
 		return
 	}
@@ -418,10 +420,17 @@ func (r *ClusterResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	if readClusterResponse.StatusCode() != 200 {
+	// If the cluster no longer exists, remove it from state so Terraform
+	// plans a re-create instead of failing the refresh.
+	if isNotFound(readClusterResponse.HTTPResponse) {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
+	if readClusterResponse.StatusCode() != 200 || readClusterResponse.JSON200 == nil {
 		resp.Diagnostics.AddError(
 			"Error getting cluster",
-			fmt.Sprintf("HTTP Status Code: %d\nStatus: %v", readClusterResponse.StatusCode(), readClusterResponse.Status()),
+			apiErrorDetail(readClusterResponse.HTTPResponse, readClusterResponse.Body),
 		)
 		return
 	}
@@ -474,10 +483,10 @@ func (r *ClusterResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	if updateClusterResponse.StatusCode() != 200 {
+	if updateClusterResponse.StatusCode() != 200 || updateClusterResponse.JSON200 == nil {
 		resp.Diagnostics.AddError(
 			"Error updating cluster",
-			fmt.Sprintf("HTTP Status Code: %d\nStatus: %v", updateClusterResponse.StatusCode(), updateClusterResponse.Status()),
+			apiErrorDetail(updateClusterResponse.HTTPResponse, updateClusterResponse.Body),
 		)
 		return
 	}
@@ -522,10 +531,16 @@ func (r *ClusterResource) Delete(ctx context.Context, req resource.DeleteRequest
 		return
 	}
 
+	// A cluster already deleted out-of-band is fine: the desired outcome
+	// (no cluster) is achieved.
+	if isNotFound(deleteClustersResponse.HTTPResponse) {
+		return
+	}
+
 	if deleteClustersResponse.StatusCode() != 204 {
 		resp.Diagnostics.AddError(
 			"Error deleting cluster",
-			fmt.Sprintf("HTTP Status Code: %d\nStatus: %v", deleteClustersResponse.StatusCode(), deleteClustersResponse.Status()),
+			apiErrorDetail(deleteClustersResponse.HTTPResponse, deleteClustersResponse.Body),
 		)
 		return
 	}
@@ -533,22 +548,13 @@ func (r *ClusterResource) Delete(ctx context.Context, req resource.DeleteRequest
 
 // Configure adds the provider configured client to the resource.
 func (r *ClusterResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	// Prevent panic if the provider has not been configured.
-	if req.ProviderData == nil {
-		return
+	if client := clientFromProviderData(req.ProviderData, "Resource", &resp.Diagnostics); client != nil {
+		r.client = client
 	}
-
-	client, ok := req.ProviderData.(*cratedb.ClientWithResponses)
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected cratedb.ClientWithResponses, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-		return
-	}
-	r.client = client
 }
 
 func (r *ClusterResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("name"), req, resp)
+	// Read refreshes the cluster by its id, so the import identifier is the
+	// cluster id.
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }

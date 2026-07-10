@@ -2,8 +2,8 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-timetypes/timetypes"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -15,7 +15,7 @@ import (
 // Ensure provider defined types fully satisfy framework interfaces.
 var (
 	_ resource.Resource                = &OrganizationResource{}
-	_ resource.ResourceWithImportState = &OrganizationResource{}
+	_ resource.ResourceWithConfigure   = &OrganizationResource{}
 	_ resource.ResourceWithImportState = &OrganizationResource{}
 )
 
@@ -77,10 +77,12 @@ func (r *OrganizationResource) Schema(ctx context.Context, req resource.SchemaRe
 				Description: "The DublinCore of the organization.",
 				Attributes: map[string]schema.Attribute{
 					"created": schema.StringAttribute{
+						CustomType:  timetypes.RFC3339Type{},
 						Computed:    true,
 						Description: "The created time.",
 					},
 					"modified": schema.StringAttribute{
+						CustomType:  timetypes.RFC3339Type{},
 						Computed:    true,
 						Description: "The modified time.",
 					},
@@ -115,10 +117,10 @@ func (r *OrganizationResource) Create(ctx context.Context, req resource.CreateRe
 		return
 	}
 
-	if createOrganizationResponse.StatusCode() != 201 {
+	if createOrganizationResponse.StatusCode() != 201 || createOrganizationResponse.JSON201 == nil {
 		resp.Diagnostics.AddError(
-			"Error getting organization",
-			fmt.Sprintf("HTTP Status Code: %d\nStatus: %v", createOrganizationResponse.StatusCode(), createOrganizationResponse.Status()),
+			"Error creating organization",
+			apiErrorDetail(createOrganizationResponse.HTTPResponse, createOrganizationResponse.Body),
 		)
 		return
 	}
@@ -162,10 +164,17 @@ func (r *OrganizationResource) Read(ctx context.Context, req resource.ReadReques
 		return
 	}
 
-	if readOrganizationResponse.StatusCode() != 200 {
+	// If the organization no longer exists, remove it from state so
+	// Terraform plans a re-create instead of failing the refresh.
+	if isNotFound(readOrganizationResponse.HTTPResponse) {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
+	if readOrganizationResponse.StatusCode() != 200 || readOrganizationResponse.JSON200 == nil {
 		resp.Diagnostics.AddError(
 			"Error getting organization",
-			fmt.Sprintf("HTTP Status Code: %d\nStatus: %v", readOrganizationResponse.StatusCode(), readOrganizationResponse.Status()),
+			apiErrorDetail(readOrganizationResponse.HTTPResponse, readOrganizationResponse.Body),
 		)
 		return
 	}
@@ -215,10 +224,10 @@ func (r *OrganizationResource) Update(ctx context.Context, req resource.UpdateRe
 		return
 	}
 
-	if updateOrganizationResponse.StatusCode() != 200 {
+	if updateOrganizationResponse.StatusCode() != 200 || updateOrganizationResponse.JSON200 == nil {
 		resp.Diagnostics.AddError(
 			"Error updating organization",
-			fmt.Sprintf("HTTP Status Code: %d\nStatus: %v", updateOrganizationResponse.StatusCode(), updateOrganizationResponse.Status()),
+			apiErrorDetail(updateOrganizationResponse.HTTPResponse, updateOrganizationResponse.Body),
 		)
 		return
 	}
@@ -261,10 +270,16 @@ func (r *OrganizationResource) Delete(ctx context.Context, req resource.DeleteRe
 		return
 	}
 
+	// An organization already deleted out-of-band is fine: the desired
+	// outcome (no organization) is achieved.
+	if isNotFound(deleteOrganizationsResponse.HTTPResponse) {
+		return
+	}
+
 	if deleteOrganizationsResponse.StatusCode() != 204 {
 		resp.Diagnostics.AddError(
 			"Error deleting organization",
-			fmt.Sprintf("HTTP Status Code: %d\nStatus: %v", deleteOrganizationsResponse.StatusCode(), deleteOrganizationsResponse.Status()),
+			apiErrorDetail(deleteOrganizationsResponse.HTTPResponse, deleteOrganizationsResponse.Body),
 		)
 		return
 	}
@@ -272,22 +287,13 @@ func (r *OrganizationResource) Delete(ctx context.Context, req resource.DeleteRe
 
 // Configure adds the provider configured client to the resource.
 func (r *OrganizationResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	// Prevent panic if the provider has not been configured.
-	if req.ProviderData == nil {
-		return
+	if client := clientFromProviderData(req.ProviderData, "Resource", &resp.Diagnostics); client != nil {
+		r.client = client
 	}
-
-	client, ok := req.ProviderData.(*cratedb.ClientWithResponses)
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected cratedb.ClientWithResponses, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-		return
-	}
-	r.client = client
 }
 
 func (r *OrganizationResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("name"), req, resp)
+	// Read refreshes the organization by its id, so the import identifier is
+	// the organization id.
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }

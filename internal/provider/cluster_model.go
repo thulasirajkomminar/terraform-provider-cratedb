@@ -40,7 +40,7 @@ type ClusterModel struct {
 	Password           types.String              `tfsdk:"password"`
 }
 
-// ClusterDCModel maps CrateDB cluster HardwareSpecs schema data.
+// ClusterHardwareSpecsModel maps CrateDB cluster HardwareSpecs schema data.
 type ClusterHardwareSpecsModel struct {
 	CpusPerNode          types.Int32  `tfsdk:"cpus_per_node"`
 	DiskSizePerNodeBytes types.Int64  `tfsdk:"disk_size_per_node_bytes"`
@@ -86,37 +86,47 @@ func (c ClusterIpWhitelistModel) GetAttrType() attr.Type {
 }
 
 func getClusterModel(ctx context.Context, cluster cratedb.Cluster) (*ClusterModel, error) {
-	dcValue := DCModel{
-		Created:  types.StringValue(cluster.Dc.Created.String()),
-		Modified: types.StringValue(cluster.Dc.Modified.String()),
+	dcObjectValue, err := getDCObjectValue(ctx, cluster.Dc)
+	if err != nil {
+		return nil, fmt.Errorf("error getting cluster DC value: %w", err)
 	}
 
-	dcObjectValue, diags := types.ObjectValueFrom(ctx, dcValue.GetAttrType(), dcValue)
-	if diags.HasError() {
-		return nil, fmt.Errorf("error getting cluster DC value")
+	hardwareSpecsObjectValue := types.ObjectNull(ClusterHardwareSpecsModel{}.GetAttrType())
+	if cluster.HardwareSpecs != nil {
+		cpusPerNode := types.Int32Null()
+		if cluster.HardwareSpecs.CpusPerNode != nil {
+			cpusPerNode = types.Int32Value(int32(*cluster.HardwareSpecs.CpusPerNode))
+		}
+		hardwareSpecsValue := ClusterHardwareSpecsModel{
+			CpusPerNode:          cpusPerNode,
+			DiskSizePerNodeBytes: intPointerToInt64Value(cluster.HardwareSpecs.DiskSizePerNodeBytes),
+			DiskType:             types.StringPointerValue(cluster.HardwareSpecs.DiskType),
+			DisksPerNode:         intPointerToInt32Value(cluster.HardwareSpecs.DisksPerNode),
+			HeapSizeBytes:        intPointerToInt64Value(cluster.HardwareSpecs.HeapSizeBytes),
+			MemoryPerNodeBytes:   intPointerToInt64Value(cluster.HardwareSpecs.MemoryPerNodeBytes),
+		}
+
+		hardwareSpecsObject, diags := types.ObjectValueFrom(ctx, hardwareSpecsValue.GetAttrType(), hardwareSpecsValue)
+		if diags.HasError() {
+			return nil, fmt.Errorf("error getting cluster hardware specs value: %v", diags.Errors())
+		}
+		hardwareSpecsObjectValue = hardwareSpecsObject
 	}
 
-	hardwareSpecsValue := ClusterHardwareSpecsModel{
-		CpusPerNode:          types.Int32Value(int32(*cluster.HardwareSpecs.CpusPerNode)),
-		DiskSizePerNodeBytes: types.Int64Value(int64(*cluster.HardwareSpecs.DiskSizePerNodeBytes)),
-		DiskType:             types.StringPointerValue(cluster.HardwareSpecs.DiskType),
-		DisksPerNode:         types.Int32Value(int32(*cluster.HardwareSpecs.DisksPerNode)),
-		HeapSizeBytes:        types.Int64Value(int64(*cluster.HardwareSpecs.HeapSizeBytes)),
-		MemoryPerNodeBytes:   types.Int64Value(int64(*cluster.HardwareSpecs.MemoryPerNodeBytes)),
-	}
+	healthObjectValue := types.ObjectNull(ClusterHealthModel{}.GetAttrType())
+	if cluster.Health != nil {
+		healthValue := ClusterHealthModel{
+			Status: types.StringNull(),
+		}
+		if cluster.Health.Status != nil {
+			healthValue.Status = types.StringValue(string(*cluster.Health.Status))
+		}
 
-	hardwareSpecsObjectValue, diags := types.ObjectValueFrom(ctx, hardwareSpecsValue.GetAttrType(), hardwareSpecsValue)
-	if diags.HasError() {
-		return nil, fmt.Errorf("error getting cluster hardware specs value")
-	}
-
-	healthValue := ClusterHealthModel{
-		Status: types.StringValue(string(*cluster.Health.Status)),
-	}
-
-	healthObjectValue, diags := types.ObjectValueFrom(ctx, healthValue.GetAttrType(), healthValue)
-	if diags.HasError() {
-		return nil, fmt.Errorf("error getting cluster health value")
+		healthObject, diags := types.ObjectValueFrom(ctx, healthValue.GetAttrType(), healthValue)
+		if diags.HasError() {
+			return nil, fmt.Errorf("error getting cluster health value: %v", diags.Errors())
+		}
+		healthObjectValue = healthObject
 	}
 
 	var ipWhitelistValues []ClusterIpWhitelistModel
@@ -124,7 +134,7 @@ func getClusterModel(ctx context.Context, cluster cratedb.Cluster) (*ClusterMode
 		for _, ipWhitelist := range *cluster.IpWhitelist {
 			ipWhitelistValues = append(ipWhitelistValues, ClusterIpWhitelistModel{
 				Cidr:        types.StringValue(ipWhitelist.Cidr),
-				Description: types.StringValue(*ipWhitelist.Description),
+				Description: types.StringPointerValue(ipWhitelist.Description),
 			})
 		}
 	}
@@ -145,11 +155,11 @@ func getClusterModel(ctx context.Context, cluster cratedb.Cluster) (*ClusterMode
 		Fqdn:               types.StringPointerValue(cluster.Fqdn),
 		GcAvailable:        types.BoolPointerValue(cluster.GcAvailable),
 		Name:               types.StringValue(cluster.Name),
-		NumNodes:           types.Int32Value(int32(*cluster.NumNodes)),
+		NumNodes:           intPointerToInt32Value(cluster.NumNodes),
 		Origin:             types.StringPointerValue(cluster.Origin),
 		ProductName:        types.StringValue(cluster.ProductName),
 		ProductTier:        types.StringValue(cluster.ProductTier),
-		ProductUnit:        types.Int32Value(int32(*cluster.ProductUnit)),
+		ProductUnit:        intPointerToInt32Value(cluster.ProductUnit),
 		ProjectId:          types.StringValue(cluster.ProjectId),
 		SubscriptionId:     types.StringPointerValue(cluster.SubscriptionId),
 		Suspended:          types.BoolPointerValue(cluster.Suspended),

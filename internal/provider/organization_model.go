@@ -21,24 +21,34 @@ type OrganizationModel struct {
 }
 
 func getOrganizationModel(ctx context.Context, organization cratedb.Organization) (*OrganizationModel, error) {
-	dcValue := DCModel{
-		Created:  types.StringValue(organization.Dc.Created.String()),
-		Modified: types.StringValue(organization.Dc.Modified.String()),
+	dcObjectValue, err := getDCObjectValue(ctx, organization.Dc)
+	if err != nil {
+		return nil, fmt.Errorf("error getting organization DC value: %w", err)
 	}
 
-	dcObjectValue, diags := types.ObjectValueFrom(ctx, dcValue.GetAttrType(), dcValue)
-	if diags.HasError() {
-		return nil, fmt.Errorf("error getting organization DC value")
+	email := types.StringNull()
+	if organization.Email != nil {
+		email = types.StringValue(string(*organization.Email))
+	}
+
+	planType := types.Int32Null()
+	if organization.PlanType != nil {
+		planType = types.Int32Value(int32(*organization.PlanType))
+	}
+
+	roleFQN := types.StringNull()
+	if organization.RoleFqn != nil {
+		roleFQN = types.StringValue(string(*organization.RoleFqn))
 	}
 
 	return &OrganizationModel{
 		Dc:                   dcObjectValue,
-		Email:                types.StringValue(string(*organization.Email)),
-		Id:                   types.StringValue(*organization.Id),
+		Email:                email,
+		Id:                   types.StringPointerValue(organization.Id),
 		Name:                 types.StringValue(organization.Name),
-		NotificationsEnabled: types.BoolValue(*organization.NotificationsEnabled),
-		PlanType:             types.Int32Value(int32(*organization.PlanType)),
-		ProjectCount:         types.Int32Value(int32(*organization.ProjectCount)),
-		RoleFQN:              types.StringValue(string(*organization.RoleFqn)),
+		NotificationsEnabled: types.BoolPointerValue(organization.NotificationsEnabled),
+		PlanType:             planType,
+		ProjectCount:         intPointerToInt32Value(organization.ProjectCount),
+		RoleFQN:              roleFQN,
 	}, nil
 }

@@ -2,8 +2,8 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-timetypes/timetypes"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -15,7 +15,7 @@ import (
 // Ensure provider defined types fully satisfy framework interfaces.
 var (
 	_ resource.Resource                = &ProjectResource{}
-	_ resource.ResourceWithImportState = &ProjectResource{}
+	_ resource.ResourceWithConfigure   = &ProjectResource{}
 	_ resource.ResourceWithImportState = &ProjectResource{}
 )
 
@@ -46,6 +46,7 @@ func (r *ProjectResource) Schema(ctx context.Context, req resource.SchemaRequest
 				Description: "The DublinCore of the project.",
 				Attributes: map[string]schema.Attribute{
 					"created": schema.StringAttribute{
+						CustomType:  timetypes.RFC3339Type{},
 						Computed:    true,
 						Description: "The created time.",
 						PlanModifiers: []planmodifier.String{
@@ -53,6 +54,7 @@ func (r *ProjectResource) Schema(ctx context.Context, req resource.SchemaRequest
 						},
 					},
 					"modified": schema.StringAttribute{
+						CustomType:  timetypes.RFC3339Type{},
 						Computed:    true,
 						Description: "The modified time.",
 						PlanModifiers: []planmodifier.String{
@@ -113,10 +115,10 @@ func (r *ProjectResource) Create(ctx context.Context, req resource.CreateRequest
 		return
 	}
 
-	if createProjectResponse.StatusCode() != 201 {
+	if createProjectResponse.StatusCode() != 201 || createProjectResponse.JSON201 == nil {
 		resp.Diagnostics.AddError(
-			"Error getting project",
-			fmt.Sprintf("HTTP Status Code: %d\nStatus: %v", createProjectResponse.StatusCode(), createProjectResponse.Status()),
+			"Error creating project",
+			apiErrorDetail(createProjectResponse.HTTPResponse, createProjectResponse.Body),
 		)
 		return
 	}
@@ -160,10 +162,17 @@ func (r *ProjectResource) Read(ctx context.Context, req resource.ReadRequest, re
 		return
 	}
 
-	if readProjectResponse.StatusCode() != 200 {
+	// If the project no longer exists, remove it from state so Terraform
+	// plans a re-create instead of failing the refresh.
+	if isNotFound(readProjectResponse.HTTPResponse) {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
+	if readProjectResponse.StatusCode() != 200 || readProjectResponse.JSON200 == nil {
 		resp.Diagnostics.AddError(
 			"Error getting project",
-			fmt.Sprintf("HTTP Status Code: %d\nStatus: %v", readProjectResponse.StatusCode(), readProjectResponse.Status()),
+			apiErrorDetail(readProjectResponse.HTTPResponse, readProjectResponse.Body),
 		)
 		return
 	}
@@ -212,10 +221,10 @@ func (r *ProjectResource) Update(ctx context.Context, req resource.UpdateRequest
 		return
 	}
 
-	if updateProjectResponse.StatusCode() != 200 {
+	if updateProjectResponse.StatusCode() != 200 || updateProjectResponse.JSON200 == nil {
 		resp.Diagnostics.AddError(
 			"Error updating project",
-			fmt.Sprintf("HTTP Status Code: %d\nStatus: %v", updateProjectResponse.StatusCode(), updateProjectResponse.Status()),
+			apiErrorDetail(updateProjectResponse.HTTPResponse, updateProjectResponse.Body),
 		)
 		return
 	}
@@ -258,10 +267,16 @@ func (r *ProjectResource) Delete(ctx context.Context, req resource.DeleteRequest
 		return
 	}
 
+	// A project already deleted out-of-band is fine: the desired outcome
+	// (no project) is achieved.
+	if isNotFound(deleteProjectsResponse.HTTPResponse) {
+		return
+	}
+
 	if deleteProjectsResponse.StatusCode() != 204 {
 		resp.Diagnostics.AddError(
 			"Error deleting project",
-			fmt.Sprintf("HTTP Status Code: %d\nStatus: %v", deleteProjectsResponse.StatusCode(), deleteProjectsResponse.Status()),
+			apiErrorDetail(deleteProjectsResponse.HTTPResponse, deleteProjectsResponse.Body),
 		)
 		return
 	}
@@ -269,22 +284,13 @@ func (r *ProjectResource) Delete(ctx context.Context, req resource.DeleteRequest
 
 // Configure adds the provider configured client to the resource.
 func (r *ProjectResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
-	// Prevent panic if the provider has not been configured.
-	if req.ProviderData == nil {
-		return
+	if client := clientFromProviderData(req.ProviderData, "Resource", &resp.Diagnostics); client != nil {
+		r.client = client
 	}
-
-	client, ok := req.ProviderData.(*cratedb.ClientWithResponses)
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected cratedb.ClientWithResponses, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-		return
-	}
-	r.client = client
 }
 
 func (r *ProjectResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resource.ImportStatePassthroughID(ctx, path.Root("name"), req, resp)
+	// Read refreshes the project by its id, so the import identifier is the
+	// project id.
+	resource.ImportStatePassthroughID(ctx, path.Root("id"), req, resp)
 }

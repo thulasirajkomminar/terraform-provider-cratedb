@@ -2,10 +2,11 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-framework-timetypes/timetypes"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/thulasirajkomminar/cratedb-cloud-go"
 )
 
@@ -23,6 +24,71 @@ func NewClusterDataSource() datasource.DataSource {
 // ClusterDataSource is the data source implementation.
 type ClusterDataSource struct {
 	client *cratedb.ClientWithResponses
+}
+
+// ClusterDataSourceModel maps the data source schema data. Unlike
+// ClusterModel it has no organization_id, which is not part of the API's
+// cluster representation.
+type ClusterDataSourceModel struct {
+	AllowCustomStorage types.Bool                `tfsdk:"allow_custom_storage"`
+	AllowSuspend       types.Bool                `tfsdk:"allow_suspend"`
+	BackupSchedule     types.String              `tfsdk:"backup_schedule"`
+	Channel            types.String              `tfsdk:"channel"`
+	CrateVersion       types.String              `tfsdk:"crate_version"`
+	Dc                 types.Object              `tfsdk:"dc"`
+	DeletionProtected  types.Bool                `tfsdk:"deletion_protected"`
+	ExternalIp         types.String              `tfsdk:"external_ip"`
+	Fqdn               types.String              `tfsdk:"fqdn"`
+	GcAvailable        types.Bool                `tfsdk:"gc_available"`
+	HardwareSpecs      types.Object              `tfsdk:"hardware_specs"`
+	Health             types.Object              `tfsdk:"health"`
+	Id                 types.String              `tfsdk:"id"`
+	IpWhitelist        []ClusterIpWhitelistModel `tfsdk:"ip_whitelist"`
+	Name               types.String              `tfsdk:"name"`
+	NumNodes           types.Int32               `tfsdk:"num_nodes"`
+	Origin             types.String              `tfsdk:"origin"`
+	ProductName        types.String              `tfsdk:"product_name"`
+	ProductTier        types.String              `tfsdk:"product_tier"`
+	ProductUnit        types.Int32               `tfsdk:"product_unit"`
+	ProjectId          types.String              `tfsdk:"project_id"`
+	SubscriptionId     types.String              `tfsdk:"subscription_id"`
+	Suspended          types.Bool                `tfsdk:"suspended"`
+	Url                types.String              `tfsdk:"url"`
+	Username           types.String              `tfsdk:"username"`
+	Password           types.String              `tfsdk:"password"`
+}
+
+// clusterDataSourceModelFrom converts the shared cluster model to the data
+// source model.
+func clusterDataSourceModelFrom(m ClusterModel) ClusterDataSourceModel {
+	return ClusterDataSourceModel{
+		AllowCustomStorage: m.AllowCustomStorage,
+		AllowSuspend:       m.AllowSuspend,
+		BackupSchedule:     m.BackupSchedule,
+		Channel:            m.Channel,
+		CrateVersion:       m.CrateVersion,
+		Dc:                 m.Dc,
+		DeletionProtected:  m.DeletionProtected,
+		ExternalIp:         m.ExternalIp,
+		Fqdn:               m.Fqdn,
+		GcAvailable:        m.GcAvailable,
+		HardwareSpecs:      m.HardwareSpecs,
+		Health:             m.Health,
+		Id:                 m.Id,
+		IpWhitelist:        m.IpWhitelist,
+		Name:               m.Name,
+		NumNodes:           m.NumNodes,
+		Origin:             m.Origin,
+		ProductName:        m.ProductName,
+		ProductTier:        m.ProductTier,
+		ProductUnit:        m.ProductUnit,
+		ProjectId:          m.ProjectId,
+		SubscriptionId:     m.SubscriptionId,
+		Suspended:          m.Suspended,
+		Url:                m.Url,
+		Username:           m.Username,
+		Password:           m.Password,
+	}
 }
 
 // Metadata returns the data source type name.
@@ -62,10 +128,12 @@ func (d *ClusterDataSource) Schema(ctx context.Context, req datasource.SchemaReq
 				Description: "The DublinCore of the cluster.",
 				Attributes: map[string]schema.Attribute{
 					"created": schema.StringAttribute{
+						CustomType:  timetypes.RFC3339Type{},
 						Computed:    true,
 						Description: "The created time.",
 					},
 					"modified": schema.StringAttribute{
+						CustomType:  timetypes.RFC3339Type{},
 						Computed:    true,
 						Description: "The modified time.",
 					},
@@ -121,14 +189,6 @@ func (d *ClusterDataSource) Schema(ctx context.Context, req datasource.SchemaReq
 				Computed:    true,
 				Description: "The health of the cluster.",
 				Attributes: map[string]schema.Attribute{
-					"last_seen": schema.StringAttribute{
-						Computed:    true,
-						Description: "The last seen time.",
-					},
-					"running_operation": schema.StringAttribute{
-						Computed:    true,
-						Description: "The type of the currently running operation. Returns an empty string if there is no operation in progress.",
-					},
 					"status": schema.StringAttribute{
 						Computed:    true,
 						Description: "The health status of the cluster.",
@@ -152,38 +212,6 @@ func (d *ClusterDataSource) Schema(ctx context.Context, req datasource.SchemaReq
 							Computed:    true,
 							Description: "The description.",
 						},
-					},
-				},
-			},
-			"last_async_operation": schema.SingleNestedAttribute{
-				Computed:    true,
-				Description: "The last async operation of the cluster.",
-				Attributes: map[string]schema.Attribute{
-					"dc": schema.SingleNestedAttribute{
-						Computed:    true,
-						Description: "The DublinCore of the cluster.",
-						Attributes: map[string]schema.Attribute{
-							"created": schema.StringAttribute{
-								Computed:    true,
-								Description: "The created time.",
-							},
-							"modified": schema.StringAttribute{
-								Computed:    true,
-								Description: "The modified time.",
-							},
-						},
-					},
-					"id": schema.StringAttribute{
-						Computed:    true,
-						Description: "The id of the last async operation.",
-					},
-					"status": schema.StringAttribute{
-						Computed:    true,
-						Description: "The status of the last async operation.",
-					},
-					"type": schema.StringAttribute{
-						Computed:    true,
-						Description: "The type of the last async operation.",
 					},
 				},
 			},
@@ -242,25 +270,14 @@ func (d *ClusterDataSource) Schema(ctx context.Context, req datasource.SchemaReq
 
 // Configure adds the provider configured client to the data source.
 func (d *ClusterDataSource) Configure(ctx context.Context, req datasource.ConfigureRequest, resp *datasource.ConfigureResponse) {
-	// Prevent panic if the provider has not been configured.
-	if req.ProviderData == nil {
-		return
+	if client := clientFromProviderData(req.ProviderData, "Data Source", &resp.Diagnostics); client != nil {
+		d.client = client
 	}
-
-	client, ok := req.ProviderData.(*cratedb.ClientWithResponses)
-	if !ok {
-		resp.Diagnostics.AddError(
-			"Unexpected Data Source Configure Type",
-			fmt.Sprintf("Expected cratedb.ClientWithResponses, got: %T. Please report this issue to the provider developers.", req.ProviderData),
-		)
-		return
-	}
-	d.client = client
 }
 
 // Read refreshes the Terraform state with the latest data.
 func (d *ClusterDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	var state ClusterModel
+	var state ClusterDataSourceModel
 
 	resp.Diagnostics.Append(req.Config.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
@@ -276,10 +293,10 @@ func (d *ClusterDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		return
 	}
 
-	if readClusterResponse.StatusCode() != 200 {
+	if readClusterResponse.StatusCode() != 200 || readClusterResponse.JSON200 == nil {
 		resp.Diagnostics.AddError(
 			"Error getting cluster",
-			fmt.Sprintf("HTTP Status Code: %d\nStatus: %v", readClusterResponse.StatusCode(), readClusterResponse.Status()),
+			apiErrorDetail(readClusterResponse.HTTPResponse, readClusterResponse.Body),
 		)
 		return
 	}
@@ -293,7 +310,7 @@ func (d *ClusterDataSource) Read(ctx context.Context, req datasource.ReadRequest
 		)
 		return
 	}
-	state = *clusterState
+	state = clusterDataSourceModelFrom(*clusterState)
 
 	// Set state
 	diags := resp.State.Set(ctx, &state)
